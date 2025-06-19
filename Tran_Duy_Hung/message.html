@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ứng dụng ký số file sử dụng thuật toán RSA - Bảo mật và xác thực file của bạn">
+    <meta name="theme-color" content="#6366f1">
+    <title>RSA Sign - Ký số File</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Styles -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #2c3e50;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .container {
+            max-width: 900px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+            margin-bottom: 25px;
+            background: rgba(255, 255, 255, 0.95);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-header {
+            background: var(--primary-color);
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+        }
+
+        .card-body {
+            padding: 25px;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            background: #357abd;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(74, 144, 226, 0.3);
+        }
+
+        .form-control {
+            border-radius: 8px;
+            padding: 12px;
+            border: 2px solid #e1e1e1;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(74, 144, 226, 0.25);
+        }
+
+        .form-label {
+            font-weight: 600;
+            color: var(--secondary-color);
+            margin-bottom: 8px;
+        }
+
+        #signature {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+
+        .alert {
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .page-title {
+            color: var(--secondary-color);
+            font-weight: 700;
+            margin-bottom: 30px;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .custom-file-label {
+            display: inline-block;
+            padding: 12px 20px;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .custom-file-label:hover {
+            border-color: var(--primary-color);
+            background: #e9ecef;
+        }
+
+        .icon-wrapper {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .icon-wrapper i {
+            font-size: 48px;
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .loading i {
+            font-size: 24px;
+            color: var(--primary-color);
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-shield-alt"></i> RSA Sign
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#features">Tính năng</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#history">Lịch sử</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#about">Giới thiệu</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container" style="margin-top: 100px;">
+        <h1 class="page-title">
+            <i class="fas fa-shield-alt"></i>
+            Ứng dụng Ký số File RSA
+        </h1>
+
+        <!-- Features Section -->
+        <section id="features" class="features">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="feature-item">
+                        <i class="fas fa-lock"></i>
+                        <h3>Bảo mật</h3>
+                        <p>Sử dụng thuật toán RSA để đảm bảo tính bảo mật và toàn vẹn của file</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-item">
+                        <i class="fas fa-bolt"></i>
+                        <h3>Nhanh chóng</h3>
+                        <p>Xử lý nhanh chóng với giao diện thân thiện và dễ sử dụng</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="feature-item">
+                        <i class="fas fa-history"></i>
+                        <h3>Theo dõi</h3>
+                        <p>Lưu trữ lịch sử ký số và xác thực để dễ dàng quản lý</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-signature"></i> Ký số File
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="icon-wrapper">
+                            <i class="fas fa-file-signature"></i>
+                        </div>
+                        <form id="uploadForm">
+                            <div class="mb-4">
+                                <label for="file" class="form-label">Chọn File</label>
+                                <div class="file-input-wrapper">
+                                    <input type="file" class="form-control" id="file" required>
+                                    <div class="custom-file-label" id="fileLabel">
+                                        <i class="fas fa-cloud-upload-alt"></i> Kéo thả hoặc click để chọn file
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-signature"></i> Ký số
+                            </button>
+                        </form>
+                        <div class="loading" id="uploadLoading">
+                            <i class="fas fa-spinner"></i>
+                            <p>Đang xử lý...</p>
+                        </div>
+                        <div id="signatureResult" class="mt-4" style="display: none;">
+                            <h6 class="mb-3">
+                                <i class="fas fa-key"></i> Chữ ký số:
+                            </h6>
+                            <pre id="signature" class="bg-light p-3"></pre>
+                            <button class="btn btn-outline-primary mt-3" onclick="copySignature()">
+                                <i class="fas fa-copy"></i> Sao chép chữ ký
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-check-circle"></i> Xác thực Chữ ký
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="icon-wrapper">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <form id="verifyForm">
+                            <div class="mb-4">
+                                <label for="verifyFile" class="form-label">Chọn File</label>
+                                <div class="file-input-wrapper">
+                                    <input type="file" class="form-control" id="verifyFile" required>
+                                    <div class="custom-file-label" id="verifyFileLabel">
+                                        <i class="fas fa-cloud-upload-alt"></i> Kéo thả hoặc click để chọn file
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label for="signatureInput" class="form-label">Chữ ký số</label>
+                                <textarea class="form-control" id="signatureInput" rows="3" required 
+                                        placeholder="Dán chữ ký số vào đây..."></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-check"></i> Xác thực
+                            </button>
+                        </form>
+                        <div class="loading" id="verifyLoading">
+                            <i class="fas fa-spinner"></i>
+                            <p>Đang xác thực...</p>
+                        </div>
+                        <div id="verifyResult" class="mt-4" style="display: none;">
+                            <div class="alert" role="alert"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <section id="history" class="mt-5">
+            <h2 class="text-center mb-4">Lịch sử hoạt động</h2>
+            <div class="card">
+                <div class="card-body">
+                    <table class="table history-table">
+                        <thead>
+                            <tr>
+                                <th>Thời gian</th>
+                                <th>Hành động</th>
+                                <th>Tên file</th>
+                                <th>Chữ ký</th>
+                                <th>Trạng thái</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- History items will be added here dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Section -->
+        <section id="about" class="mt-5">
+            <h2 class="text-center mb-4">Giới thiệu</h2>
+            <div class="card">
+                <div class="card-body">
+                    <h3>Ứng dụng Ký số File RSA</h3>
+                    <p>Ứng dụng này sử dụng thuật toán RSA để ký số và xác thực tính toàn vẹn của file. RSA là một thuật toán mã hóa khóa công khai được sử dụng rộng rãi trong bảo mật thông tin.</p>
+                    
+                    <h4 class="mt-4">Tính năng chính:</h4>
+                    <ul>
+                        <li>Ký số file bằng thuật toán RSA</li>
+                        <li>Xác thực tính toàn vẹn của file</li>
+                        <li>Hỗ trợ kéo thả file</li>
+                        <li>Lưu trữ lịch sử hoạt động</li>
+                        <li>Giao diện thân thiện, dễ sử dụng</li>
+                    </ul>
+
+                    <h4 class="mt-4">Cách sử dụng:</h4>
+                    <ol>
+                        <li>Chọn file cần ký số hoặc xác thực</li>
+                        <li>Nhấn nút tương ứng để thực hiện thao tác</li>
+                        <li>Đối với xác thực, dán chữ ký số vào ô nhập liệu</li>
+                        <li>Xem kết quả và lịch sử hoạt động</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section: Truyền file qua socket và xác thực chữ ký số -->
+        <section id="socket-sign" class="mt-5">
+            <h2 class="text-center mb-4">Truyền file có chữ ký số (Socket)</h2>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5>1. Gửi file để ký số và truyền đi</h5>
+                    <input type="file" id="socketFile" class="form-control mb-2" />
+                    <button class="btn btn-primary" onclick="sendFileViaSocket()">
+                        <i class="fas fa-paper-plane"></i> Gửi file qua Socket
+                    </button>
+                </div>
+            </div>
+            <div class="card mb-4" id="receivedSection" style="display:none;">
+                <div class="card-body">
+                    <h5>2. Đã nhận file ký số</h5>
+                    <p><b>Tên file:</b> <span id="receivedFileName"></span></p>
+                    <p><b>Chữ ký số:</b></p>
+                    <pre id="receivedSignature" class="bg-light p-2"></pre>
+                    <a id="downloadReceivedFile" class="btn btn-success" href="#" download>
+                        <i class="fas fa-download"></i> Tải file về
+                    </a>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body">
+                    <h5>3. Xác thực file nhận được</h5>
+                    <input type="file" id="verifySocketFile" class="form-control mb-2" />
+                    <textarea id="verifySocketSignature" class="form-control mb-2" rows="2" placeholder="Dán chữ ký số vào đây..."></textarea>
+                    <button class="btn btn-primary" onclick="verifyFileViaSocket()">
+                        <i class="fas fa-check"></i> Xác thực qua Socket
+                    </button>
+                    <div id="socketVerifyResult" class="alert mt-3" style="display:none;"></div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer mt-5">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Ứng dụng Ký số File RSA</h5>
+                    <p>Bảo mật và xác thực file của bạn một cách an toàn và hiệu quả.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <h5>Liên hệ</h5>
+                    <p>
+                        <a href="#"><i class="fab fa-github"></i> GitHub</a><br>
+                        <a href="#"><i class="fas fa-envelope"></i> Email</a>
+                    </p>
+                </div>
+            </div>
+            <hr>
+            <div class="text-center">
+                <p>&copy; 2024 RSA Sign. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html> 
